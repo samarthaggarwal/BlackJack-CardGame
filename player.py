@@ -9,6 +9,10 @@ from mpl_toolkits.mplot3d import Axes3D
 
 # np.random.seed(32)
 
+def expand(states):
+    for s in states:
+        s[0].print()
+
 # runs an episode with given policy in the given env, returns total reward for that episode
 def episode(env, policy):
     state = env.reset()
@@ -18,6 +22,19 @@ def episode(env, policy):
         state, reward, done = env.step(action)
 
     return reward
+
+# returns average reward on running acc to greedy policy on a given q-function
+def test(env, num_episodes, q, epsilon):
+    total_reward = 0
+    for _ in range(num_episodes):
+        state = env.reset()
+        state, reward, done = env.check_after_init()
+        while(not done):
+            action = greedy(state, q)
+            state, reward, done = env.step(action)
+        total_reward += reward
+    
+    return total_reward/num_episodes
 
 def monte_carlo(env, policy, first_visit, num_episodes):
     # size of v = (rawsum, number of distinct trumps, dealer's hand)
@@ -116,10 +133,6 @@ def k_step_TD(env, policy, k, alpha, num_episodes):
 
     return v
 
-def expand(states):
-    for s in states:
-        s[0].print()
-
 def k_step_sarsa(env, k, alpha, num_episodes, epsilon=None, epsilon_decay=False):
     # size of v = (actions, rawsum, number of distinct trumps, dealer's hand)
     q = np.zeros((61,4,10,2), dtype=float)
@@ -137,36 +150,33 @@ def k_step_sarsa(env, k, alpha, num_episodes, epsilon=None, epsilon_decay=False)
             # no actionable state encountered in this episode so no update
             continue
         # states.append(copy((state,action)))
-        
+
+        action = epsilon_greedy(state, q, episode_epsilon)
+
         # take k-1 steps
         for _ in range(k-1):
-            action = epsilon_greedy(state, q, episode_epsilon)
             states.append((copy(state), action))
-            # print("adding state ", action)
-            # state.print()
             state, reward, done = env.step(action)
             if done:
                 break
+            action = epsilon_greedy(state, q, episode_epsilon)
 
         if not done:
             assert(len(states)==k-1), "number of states not correct"
 
         if(not done):
             while(True):
-                action = epsilon_greedy(state, q, episode_epsilon)
                 states.append((copy(state), action))
-                # print("adding state ", action)
-                # state.print()
                 state, reward, done = env.step(action)
                 if done:
                     break
                 assert(reward==0), "reward is non-zero for intermediate states"
+                action = epsilon_greedy(state, q, episode_epsilon)
+
                 # update S_t, remove from states list and add S_t+k to the states list
                 initial_state = state_transformation(states[0][0])
                 final_state = state_transformation(state)
                 q[initial_state][0 if states[0][1]=="HIT" else 1] += alpha * ( reward + q[final_state][0 if action=="HIT" else 1] - q[initial_state][0 if states[0][1]=="HIT" else 1])
-                # print("removing state ", states[0][1])
-                # states[0][0].print()
                 states = states[1:] # + [copy((state, action))]
 
             assert(len(states)==k), ipdb.set_trace() # "number of states in window is not k"
@@ -179,10 +189,6 @@ def k_step_sarsa(env, k, alpha, num_episodes, epsilon=None, epsilon_decay=False)
 
         for s in states:
             assert(s[0].category=="GENERAL"), "states within an episode are not actionable"
-            # if s.category=="BUST" or s.category=="SUM31":
-            #     raise Exception("states within an episode are not actionable")
-            # else:
-            #     s.print()
             
         # updating value of states after reaching end of episode
         for s in states:
@@ -231,6 +237,47 @@ def q_learning(env, alpha, num_episodes, epsilon=None, epsilon_decay=False):
 
     return q
 
+def TD_lambda(env, alpha, lamda, num_episodes, epsilon=None, epsilon_decay=False):
+    # size of v = (actions, rawsum, number of distinct trumps, dealer's hand)
+    q = np.zeros((61,4,10,2), dtype=float)
+    # actions = {"HIT", "STICK"}
+
+    for ep in tqdm(range(1, num_episodes+1)):
+        # print("====================== NEW EPISODE ======================")
+        # TODO : change decay rate suitably
+        episode_epsilon = epsilon/(ep**0.5) if epsilon_decay else epsilon
+        
+        states = []
+        state = env.reset()
+        state, reward, done = env.check_after_init()
+        if done:
+            # no actionable state encountered in this episode so no update
+            continue
+
+        while(not done):
+            action = epsilon_greedy(state, q, episode_epsilon)
+            states.append((copy(state), action))
+            state, reward, done = env.step(action)
+
+            if done:
+                break
+            assert(reward==0), "reward != 0 for actionable state"
+            assert(state.category=="GENERAL"), "states within an episode are not actionable"
+
+        episode_length = len(states)
+        for i in range(len(states)):
+            (s,a) = states[i]
+            gt_lamda = 0
+            for j,(s_,a_) in enumerate(states[i+1:]):
+                final_state = state_transformation(s_)
+                gt_lamda += (lamda**j) * q[final_state][0 if a_=="HIT" else 1]
+            gt_lamda *= (1-lamda)
+            gt_lamda += (lamda**(episode_length-i-1)) * reward
+
+            initial_state = state_transformation(s)
+            q[initial_state][0 if a=="HIT" else 1] += alpha * (gt_lamda - q[initial_state][0 if a=="HIT" else 1])
+
+    return q
 
 env = Simulator()
 
@@ -241,15 +288,27 @@ env = Simulator()
 #     reward += episode(env, dealer_policy)
 # print(reward/num_episodes)
 
+
+# # ===== MONTE CARLO =====
 # v = monte_carlo(env, dealer_policy, first_visit=True, num_episodes=100000)
 
+# # ===== K-STEP SARSA ===== 
 # v = k_step_TD(env, dealer_policy, k=1, alpha=0.1, num_episodes=1000)
 
 # for k in range(1,100):
 #     v = k_step_TD(env, dealer_policy, k=k, alpha=0.1, num_episodes=1000)
 
-# for k in range(1,100):
-#         q = k_step_sarsa(env, k=k, alpha=0.1, num_episodes=1000, epsilon=0.1, epsilon_decay=True)
+# # ===== K-STEP SARSA WITH DECAYING EPSILON ===== 
+# q = k_step_sarsa(env, k=5, alpha=0.1, num_episodes=100000, epsilon=0.1, epsilon_decay=True)
 
-q = q_learning(env, alpha=0.1, num_episodes=10000, epsilon=0.2, epsilon_decay=True)
+# # ===== Q-LEARNING ===== 
+# q = q_learning(env, alpha=0.1, num_episodes=100000, epsilon=0.1, epsilon_decay=True)
 
+# # ===== TD-LAMDA ===== 
+q = TD_lambda(env, alpha=0.1, lamda=0.5, num_episodes=100000, epsilon=0.1, epsilon_decay=True)
+
+# # ===== TESTING =====
+reward = 0
+for _ in tqdm(range(1000)):
+    reward += (test(env, num_episodes=1000, q=q, epsilon=0.1))
+print(reward/1000)

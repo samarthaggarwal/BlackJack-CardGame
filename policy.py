@@ -30,4 +30,3 @@ def epsilon_greedy(state, q, epsilon):
         return greedy_action
     else:
         return non_greedy_action
-
