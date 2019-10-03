@@ -4,6 +4,8 @@ from policy import *
 import ipdb
 from copy import copy
 from tqdm import tqdm
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 np.random.seed(32)
 
@@ -64,7 +66,7 @@ def k_step_TD(env, policy, k, alpha, num_episodes):
     v = np.zeros((61,4,10), dtype=float)
     
     for _ in tqdm(range(num_episodes)):
-        print("====================== NEW EPISODE ======================")
+        # print("====================== NEW EPISODE ======================")
         states = []
         state = env.reset()
         state, reward, done = env.check_after_init()
@@ -75,10 +77,10 @@ def k_step_TD(env, policy, k, alpha, num_episodes):
         
         # take k-1 steps
         for _ in range(k-1):
-            if done:
-                break
             action = policy(state)
             state, reward, done = env.step(action)
+            if done:
+                break
             states.append(copy(state))
         
         if not done:
@@ -90,8 +92,7 @@ def k_step_TD(env, policy, k, alpha, num_episodes):
                 state, reward, done = env.step(action)
                 if done:
                     break
-                if reward!=0:
-                    raise Exception("reward is non-zero for intermediate states")
+                assert(reward==0), "reward is non-zero for intermediate states"
                 # update S_t, remove from states list and add S_t+k to the states list
                 initial_state = state_transformation(states[0])
                 final_state = state_transformation(state)
@@ -100,21 +101,19 @@ def k_step_TD(env, policy, k, alpha, num_episodes):
 
         # TODO : states has both actionable and non-actionable states in it, DEBUG
 
+        assert(states[-1]!=None), "states[-1] is None"
+
         # if states[-1] != None:
         #     raise Exception("last state in episode is actionable, CHECK")
         # states = states[:-1]
 
-        # ipdb.set_trace()
         for s in states:
-
-            # try:
-            if s.category=="BUST" or s.category=="SUM31":
-                raise Exception("states within an episode are not actionable")
-            else:
-                s.print()
-            # except:
-                # ipdb.set_trace()
-
+            assert(s.category=="GENERAL"), "states within an episode are not actionable"
+            # if s.category=="BUST" or s.category=="SUM31":
+            #     raise Exception("states within an episode are not actionable")
+            # else:
+            #     s.print()
+            
         # updating value of states after reaching end of episode
         for s in states:
             initial_state = state_transformation(s)
@@ -131,5 +130,7 @@ env = Simulator()
 #     reward += episode(env, dealer_policy)
 # print(reward/num_episodes)
 
-# v = monte_carlo(env, dealer_policy, first_visit=True, num_episodes=10000)
-v = k_step_TD(env, dealer_policy, k=3, alpha=0.1, num_episodes=100)
+# v = monte_carlo(env, dealer_policy, first_visit=True, num_episodes=100000)
+for k in range(1,100):
+    v = k_step_TD(env, dealer_policy, k=k, alpha=0.1, num_episodes=1000)
+
