@@ -305,131 +305,131 @@ env = Simulator()
 
 # ========= Q3 =============
 
-# # ===== MONTE CARLO =====
-# v = monte_carlo(env, dealer_policy, first_visit=False, num_episodes=100000)
+# ===== MONTE CARLO =====
+v = monte_carlo(env, dealer_policy, first_visit=False, num_episodes=100000)
 
-# # ===== K-STEP TD ===== 
-# v = np.zeros((61,4,10), dtype=float)
-# num_runs = 100
-# for _ in range(num_runs):
-#     v += k_step_TD(env, dealer_policy, k=1000, alpha=0.1, num_episodes=1000000)
-# v/=num_runs
+# ===== K-STEP TD ===== 
+v = np.zeros((61,4,10), dtype=float)
+num_runs = 100
+for _ in range(num_runs):
+    v += k_step_TD(env, dealer_policy, k=1000, alpha=0.1, num_episodes=1000000)
+v/=num_runs
 
-# plot(v, "graphs/td/k1000_run100_1m")
+plot(v, "graphs/td/k1000_run100_1m")
 
 # for k in range(1,100):
 # v = k_step_TD(env, dealer_policy, k=k, alpha=0.1, num_episodes=1000)
 
 # ============ Q4 - PART 2 ===============
 
-# num_runs = 1000
-# num_episodes = 100
+num_runs = 1000
+num_episodes = 100
 
-# smoothing_window = 10
-# episode_counts = list(range(1,num_episodes+1))
+smoothing_window = 10
+episode_counts = list(range(1,num_episodes+1))
 
-# # # ===== K-STEP SARSA WITH CONSTANT EPSILON ===== 
-# for k in [1,1000]:
-#     sarsa_rewards = np.zeros(num_episodes)
-#     for _ in range(num_runs):
-#         q, episode_rewards = k_step_sarsa(env, k=k, alpha=0.1, num_episodes=num_episodes, epsilon=0.1, epsilon_decay=False)
-#         sarsa_rewards += episode_rewards
-#     sarsa_rewards/=num_runs
-#     sarsa_rewards = [np.mean(sarsa_rewards[max(i-smoothing_window,0):i+1]) for i in range(num_episodes)]
-#     plt.plot( episode_counts, sarsa_rewards, label="sarsa"+str(k))
+# # ===== K-STEP SARSA WITH CONSTANT EPSILON ===== 
+for k in [1,1000]:
+    sarsa_rewards = np.zeros(num_episodes)
+    for _ in range(num_runs):
+        q, episode_rewards = k_step_sarsa(env, k=k, alpha=0.1, num_episodes=num_episodes, epsilon=0.1, epsilon_decay=False)
+        sarsa_rewards += episode_rewards
+    sarsa_rewards/=num_runs
+    sarsa_rewards = [np.mean(sarsa_rewards[max(i-smoothing_window,0):i+1]) for i in range(num_episodes)]
+    plt.plot( episode_counts, sarsa_rewards, label="sarsa"+str(k))
 
-# # # ===== K-STEP SARSA WITH DECAYING EPSILON =====
-# for k in [1,1000]:
-#     sarsa_decay_rewards = np.zeros(num_episodes)
-#     for _ in range(num_runs):
-#         q, episode_rewards = k_step_sarsa(env, k=k, alpha=0.1, num_episodes=num_episodes, epsilon=0.1, epsilon_decay=True)
-#         sarsa_decay_rewards += episode_rewards
-#     sarsa_decay_rewards/=num_runs
-#     sarsa_decay_rewards = [np.mean(sarsa_decay_rewards[max(i-smoothing_window,0):i+1]) for i in range(num_episodes)]
-#     plt.plot( episode_counts, sarsa_decay_rewards, label="sarsa_decay"+str(k))
+# # ===== K-STEP SARSA WITH DECAYING EPSILON =====
+for k in [1,1000]:
+    sarsa_decay_rewards = np.zeros(num_episodes)
+    for _ in range(num_runs):
+        q, episode_rewards = k_step_sarsa(env, k=k, alpha=0.1, num_episodes=num_episodes, epsilon=0.1, epsilon_decay=True)
+        sarsa_decay_rewards += episode_rewards
+    sarsa_decay_rewards/=num_runs
+    sarsa_decay_rewards = [np.mean(sarsa_decay_rewards[max(i-smoothing_window,0):i+1]) for i in range(num_episodes)]
+    plt.plot( episode_counts, sarsa_decay_rewards, label="sarsa_decay"+str(k))
 
-# # # ===== Q-LEARNING ===== 
-# q_rewards = np.zeros(num_episodes)
-# for _ in range(num_runs):
-#     q, episode_rewards = q_learning(env, alpha=0.1, num_episodes=num_episodes, epsilon=0.1, epsilon_decay=False)
-#     q_rewards += episode_rewards
-# q_rewards/=num_runs
-# q_rewards = [np.mean(q_rewards[max(i-smoothing_window,0):i+1]) for i in range(num_episodes)]
-# plt.plot( episode_counts, q_rewards, label="q")
+# # ===== Q-LEARNING ===== 
+q_rewards = np.zeros(num_episodes)
+for _ in range(num_runs):
+    q, episode_rewards = q_learning(env, alpha=0.1, num_episodes=num_episodes, epsilon=0.1, epsilon_decay=False)
+    q_rewards += episode_rewards
+q_rewards/=num_runs
+q_rewards = [np.mean(q_rewards[max(i-smoothing_window,0):i+1]) for i in range(num_episodes)]
+plt.plot( episode_counts, q_rewards, label="q")
 
-# # # ===== TD-LAMDA ===== 
-# td_rewards = np.zeros(num_episodes)
-# for _ in range(num_runs):
-#     q, episode_rewards = TD_lambda(env, alpha=0.1, lamda=0.5, num_episodes=num_episodes, epsilon=0.1, epsilon_decay=True)
-#     td_rewards += episode_rewards
-# td_rewards/=num_runs
-# td_rewards = [np.mean(td_rewards[max(i-smoothing_window,0):i+1]) for i in range(num_episodes)]
-# plt.plot( episode_counts, td_rewards, label="td")
+# # ===== TD-LAMDA ===== 
+td_rewards = np.zeros(num_episodes)
+for _ in range(num_runs):
+    q, episode_rewards = TD_lambda(env, alpha=0.1, lamda=0.5, num_episodes=num_episodes, epsilon=0.1, epsilon_decay=True)
+    td_rewards += episode_rewards
+td_rewards/=num_runs
+td_rewards = [np.mean(td_rewards[max(i-smoothing_window,0):i+1]) for i in range(num_episodes)]
+plt.plot( episode_counts, td_rewards, label="td")
+
+plt.legend()
+plt.show()
+
+# ================ Q4 - PART 3 =================
+
+num_runs = 10
+num_episodes = 100000
+ks=[1,10,100,1000]
+alphas=[0.1, 0.2, 0.3, 0.4, 0.5]
+# # ===== K-STEP SARSA WITH CONSTANT EPSILON ===== 
+for k in ks:
+    rewards = []
+    for alpha in alphas:
+        q, episode_rewards = k_step_sarsa(env, k=k, alpha=alpha, num_episodes=num_episodes, epsilon=0.1, epsilon_decay=False)
+        rewards.append(test(env, num_episodes=num_runs, q=q, epsilon=0.1))
+    plt.plot( alphas, rewards, label="SARSA_k"+str(k))
+plt.legend()
+plt.xlabel('Alpha')
+plt.ylabel('Average Reward')
+plt.savefig("graphs/q4_3/sarsa.png")
+plt.close()
+
+# # ===== K-STEP SARSA WITH DECAYING EPSILON ===== 
+for k in ks:
+    rewards = []
+    for alpha in alphas:
+        q, episode_rewards = k_step_sarsa(env, k=k, alpha=alpha, num_episodes=num_episodes, epsilon=0.1, epsilon_decay=True)
+        rewards.append(test(env, num_episodes=num_runs, q=q, epsilon=0.1))
+    plt.plot( alphas, rewards, label="SARSA_Decay_k_"+str(k))
+plt.legend()
+plt.xlabel('Alpha')
+plt.ylabel('Average Reward')
+plt.savefig("graphs/q4_3/sarsa_decay.png")
+plt.close()
+
+# # ===== K-STEP SARSA WITH Q-LEARNING ===== 
+rewards = []
+for alpha in alphas:
+    q, episode_rewards = q_learning(env, alpha=0.1, num_episodes=num_episodes, epsilon=0.1, epsilon_decay=False)
+    rewards.append(test(env, num_episodes=num_runs, q=q, epsilon=0.1))
+plt.plot( alphas, rewards, label="Q-Learning")
+plt.legend()
+plt.xlabel('Alpha')
+plt.ylabel('Average Reward')
+plt.savefig("graphs/q4_3/q-learning.png")
+plt.close()
+
+# # ===== K-STEP SARSA WITH TD-LAMDA ===== 
+rewards = []
+for alpha in alphas:
+    q, episode_rewards = TD_lambda(env, alpha=0.1, lamda=0.5, num_episodes=num_episodes, epsilon=0.1, epsilon_decay=True)
+    rewards.append(test(env, num_episodes=num_runs, q=q, epsilon=0.1))
+plt.plot( alphas, rewards, label="TD(0.5)")
+plt.legend()
+plt.xlabel('Alpha')
+plt.ylabel('Average Reward')
+plt.savefig("graphs/q4_3/td.png")
+plt.close()
 
 # plt.legend()
 # plt.show()
 
-# ================ Q4 - PART 3 =================
-
-# num_runs = 10
-# num_episodes = 100000
-# ks=[1,10,100,1000]
-# alphas=[0.1, 0.2, 0.3, 0.4, 0.5]
-# # # ===== K-STEP SARSA WITH CONSTANT EPSILON ===== 
-# for k in ks:
-#     rewards = []
-#     for alpha in alphas:
-#         q, episode_rewards = k_step_sarsa(env, k=k, alpha=alpha, num_episodes=num_episodes, epsilon=0.1, epsilon_decay=False)
-#         rewards.append(test(env, num_episodes=num_runs, q=q, epsilon=0.1))
-#     plt.plot( alphas, rewards, label="SARSA_k"+str(k))
-# plt.legend()
-# plt.xlabel('Alpha')
-# plt.ylabel('Average Reward')
-# plt.savefig("graphs/q4_3/sarsa.png")
-# plt.close()
-
-# # # ===== K-STEP SARSA WITH DECAYING EPSILON ===== 
-# for k in ks:
-#     rewards = []
-#     for alpha in alphas:
-#         q, episode_rewards = k_step_sarsa(env, k=k, alpha=alpha, num_episodes=num_episodes, epsilon=0.1, epsilon_decay=True)
-#         rewards.append(test(env, num_episodes=num_runs, q=q, epsilon=0.1))
-#     plt.plot( alphas, rewards, label="SARSA_Decay_k_"+str(k))
-# plt.legend()
-# plt.xlabel('Alpha')
-# plt.ylabel('Average Reward')
-# plt.savefig("graphs/q4_3/sarsa_decay.png")
-# plt.close()
-
-# # # ===== K-STEP SARSA WITH Q-LEARNING ===== 
-# rewards = []
-# for alpha in alphas:
-#     q, episode_rewards = q_learning(env, alpha=0.1, num_episodes=num_episodes, epsilon=0.1, epsilon_decay=False)
-#     rewards.append(test(env, num_episodes=num_runs, q=q, epsilon=0.1))
-# plt.plot( alphas, rewards, label="Q-Learning")
-# plt.legend()
-# plt.xlabel('Alpha')
-# plt.ylabel('Average Reward')
-# plt.savefig("graphs/q4_3/q-learning.png")
-# plt.close()
-
-# # # ===== K-STEP SARSA WITH TD-LAMDA ===== 
-# rewards = []
-# for alpha in alphas:
-#     q, episode_rewards = TD_lambda(env, alpha=0.1, lamda=0.5, num_episodes=num_episodes, epsilon=0.1, epsilon_decay=True)
-#     rewards.append(test(env, num_episodes=num_runs, q=q, epsilon=0.1))
-# plt.plot( alphas, rewards, label="TD(0.5)")
-# plt.legend()
-# plt.xlabel('Alpha')
-# plt.ylabel('Average Reward')
-# plt.savefig("graphs/q4_3/td.png")
-# plt.close()
-
-# # plt.legend()
-# # plt.show()
-
 # ================ Q4 - PART 4 =================
 q, episode_rewards = TD_lambda(env, alpha=0.1, lamda=0.5, num_episodes=1_000_000, epsilon=0.1, epsilon_decay=True)
 v=np.max(q, axis=3)
-plot(v, "graphs/q4_4/1m.png")
+plot(v, "graphs/q4_4/1m")
 
