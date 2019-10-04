@@ -6,6 +6,7 @@ from copy import copy
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+from plot import plot
 
 # np.random.seed(32)
 
@@ -71,7 +72,7 @@ def monte_carlo(env, policy, first_visit, num_episodes):
             v[transformed_state] += reward
             num_updates[transformed_state] += 1
 
-    v/=num_episodes # not replacing nan with zeros to know which states were not updated
+    v = v/(num_updates+1e-5) # not replacing nan with zeros to know which states were not updated
 
     return v
 
@@ -133,12 +134,14 @@ def k_step_TD(env, policy, k, alpha, num_episodes):
 
     return v
 
-def k_step_sarsa(env, k, alpha, num_episodes, epsilon=None, epsilon_decay=False):
+def k_step_sarsa(env, k, alpha, num_episodes, test_episodes, epsilon=None, epsilon_decay=False):
     # size of v = (actions, rawsum, number of distinct trumps, dealer's hand)
     q = np.zeros((61,4,10,2), dtype=float)
     # actions = {"HIT", "STICK"}
+    avg_rewards = []
 
     for ep in tqdm(range(1, num_episodes+1)):
+        avg_rewards.append(test(env, num_episodes=test_episodes, q=q, epsilon=0.1))
         # print("====================== NEW EPISODE ======================")
         # TODO : change decay rate suitably
         episode_epsilon = epsilon/(ep**0.1) if epsilon_decay else epsilon
@@ -195,14 +198,16 @@ def k_step_sarsa(env, k, alpha, num_episodes, epsilon=None, epsilon_decay=False)
             initial_state = state_transformation(s[0])
             q[initial_state][0 if s[1]=="HIT" else 1] += alpha * ( reward - q[initial_state][0 if s[1]=="HIT" else 1]) # last state is not actionable so its value is zero
 
-    return q
+    return q, avg_rewards
 
-def q_learning(env, alpha, num_episodes, epsilon=None, epsilon_decay=False):
+def q_learning(env, alpha, num_episodes, test_episodes, epsilon=None, epsilon_decay=False):
     # size of v = (actions, rawsum, number of distinct trumps, dealer's hand)
     q = np.zeros((61,4,10,2), dtype=float)
     # actions = {"HIT", "STICK"}
+    avg_rewards = []
 
     for ep in tqdm(range(1, num_episodes+1)):
+        avg_rewards.append(test(env, num_episodes=test_episodes, q=q, epsilon=0.1))
         # print("====================== NEW EPISODE ======================")
         # TODO : change decay rate suitably
         episode_epsilon = epsilon/(ep**0.2) if epsilon_decay else epsilon
@@ -235,14 +240,16 @@ def q_learning(env, alpha, num_episodes, epsilon=None, epsilon_decay=False):
         except:
             ipdb.set_trace()
 
-    return q
+    return q, avg_rewards
 
-def TD_lambda(env, alpha, lamda, num_episodes, epsilon=None, epsilon_decay=False):
+def TD_lambda(env, alpha, lamda, num_episodes, test_episodes, epsilon=None, epsilon_decay=False):
     # size of v = (actions, rawsum, number of distinct trumps, dealer's hand)
     q = np.zeros((61,4,10,2), dtype=float)
     # actions = {"HIT", "STICK"}
+    avg_rewards = []
 
     for ep in tqdm(range(1, num_episodes+1)):
+        avg_rewards.append(test(env, num_episodes=test_episodes, q=q, epsilon=0.1))
         # print("====================== NEW EPISODE ======================")
         # TODO : change decay rate suitably
         episode_epsilon = epsilon/(ep**0.5) if epsilon_decay else epsilon
@@ -277,7 +284,7 @@ def TD_lambda(env, alpha, lamda, num_episodes, epsilon=None, epsilon_decay=False
             initial_state = state_transformation(s)
             q[initial_state][0 if a=="HIT" else 1] += alpha * (gt_lamda - q[initial_state][0 if a=="HIT" else 1])
 
-    return q
+    return q, avg_rewards
 
 env = Simulator()
 
@@ -290,25 +297,46 @@ env = Simulator()
 
 
 # # ===== MONTE CARLO =====
-# v = monte_carlo(env, dealer_policy, first_visit=True, num_episodes=100000)
+# v = monte_carlo(env, dealer_policy, first_visit=False, num_episodes=100000)
 
-# # ===== K-STEP SARSA ===== 
-# v = k_step_TD(env, dealer_policy, k=1, alpha=0.1, num_episodes=1000)
+# # ===== K-STEP TD ===== 
+v = np.zeros((61,4,10), dtype=float)
+num_runs = 10
+for _ in range(num_runs):
+    v += k_step_TD(env, dealer_policy, k=5, alpha=0.1, num_episodes=1000000)
+v/=num_runs
+
+plot(v, "graphs/td/k10_run10_1m")
+
+exit(0)
+
+num_episodes = 100
+test_episodes = 100000
 
 # for k in range(1,100):
-#     v = k_step_TD(env, dealer_policy, k=k, alpha=0.1, num_episodes=1000)
+# v = k_step_TD(env, dealer_policy, k=k, alpha=0.1, num_episodes=1000)
+
+# # ===== K-STEP SARSA WITH CONSTANT EPSILON ===== 
+# q, avg_rewards = k_step_sarsa(env, k=5, alpha=0.1, num_episodes=100, test_episodes=test_episodes, epsilon=0.1, epsilon_decay=False)
 
 # # ===== K-STEP SARSA WITH DECAYING EPSILON ===== 
-# q = k_step_sarsa(env, k=5, alpha=0.1, num_episodes=100000, epsilon=0.1, epsilon_decay=True)
+# q, avg_rewards = k_step_sarsa(env, k=5, alpha=0.1, num_episodes=100, test_episodes=test_episodes, epsilon=0.1, epsilon_decay=True)
 
 # # ===== Q-LEARNING ===== 
-# q = q_learning(env, alpha=0.1, num_episodes=100000, epsilon=0.1, epsilon_decay=True)
+q, avg_rewards = q_learning(env, alpha=0.05, num_episodes=num_episodes, test_episodes=test_episodes, epsilon=0.1, epsilon_decay=False)
 
 # # ===== TD-LAMDA ===== 
-q = TD_lambda(env, alpha=0.1, lamda=0.5, num_episodes=100000, epsilon=0.1, epsilon_decay=True)
+# q, avg_rewards = TD_lambda(env, alpha=0.1, lamda=0.5, num_episodes=100, test_episodes=test_episodes, epsilon=0.1, epsilon_decay=True)
 
 # # ===== TESTING =====
-reward = 0
-for _ in tqdm(range(1000)):
-    reward += (test(env, num_episodes=1000, q=q, epsilon=0.1))
-print(reward/1000)
+# reward = 0
+# for _ in tqdm(range(10)):
+#     reward += (test(env, num_episodes=100000, q=q, epsilon=0.1))
+# print(reward/10)
+
+smoothed_rewards = [np.mean(avg_rewards[max(i-5,0):i]) for i in range(num_episodes)]
+
+plt.plot(list(range(1,num_episodes+1)), smoothed_rewards)
+plt.show()
+
+
